@@ -58,12 +58,36 @@ button:active{opacity:.75}
 @media(min-width:520px){
   body{max-width:460px;margin:0 auto;border-left:1px solid #242a3a;border-right:1px solid #242a3a;position:relative}
 }
+.sw{margin:10px 12px 4px;background:#171c26;border:1px solid #242a3a;border-radius:14px;padding:6px 14px}
+.swrow{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #202634}
+.swrow:last-of-type{border-bottom:none}
+.swrow b{display:block;font-size:14px;color:#e8ecf4;font-weight:600}
+.swrow span{display:block;font-size:11.5px;color:#7d86a0;margin-top:3px}
+.tg{position:relative;width:46px;height:26px;flex:0 0 46px}
+.tg input{display:none}
+.tg i{position:absolute;inset:0;background:#2a3040;border-radius:14px;transition:.18s}
+.tg i:after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;background:#8d95ab;border-radius:50%;transition:.18s}
+.tg input:checked+i{background:#2f6df6}
+.tg input:checked+i:after{left:23px;background:#fff}
+.swtip{font-size:11.5px;color:#6f7791;padding:8px 0 4px}
+.swkey{display:none;gap:8px;padding:4px 0 10px}
+.swkey.on{display:flex}
+.swkey input{flex:1;min-width:0;background:#0f1319;border:1px solid #2a3040;color:#dfe5ef;border-radius:9px;padding:9px 10px;font-size:12.5px}
+.swkey button{background:#2f6df6;color:#fff;border:0;border-radius:9px;padding:0 14px;font-size:13px}
 </style>
 </head>
 <body>
 <div class="top">
   <div class="l"><span class="dot"></span><span class="title">星缘看板</span></div>
-  <div class="sub">wjall · 11-21 02:04</div>
+  <div class="sub">wjall · 11-21 02:06</div>
+</div>
+
+<div class="sw" id="swbar">
+  <div class="swrow"><div><b>自动回复</b><span>未读进来就用智谱接一句</span></div><label class="tg"><input type="checkbox" id="sw_reply"><i></i></label></div>
+  <div class="swrow"><div><b>自动捞在线</b><span>只捞女生，捞到就打招呼</span></div><label class="tg"><input type="checkbox" id="sw_pick"><i></i></label></div>
+  <div class="swrow"><div><b>自动随机匹配</b><span>只匹配女生，配到就打招呼</span></div><label class="tg"><input type="checkbox" id="sw_match"><i></i></label></div>
+  <div class="swtip" id="swtip">开关同步到 GitHub，机器人 2 分钟内生效</div>
+  <div class="swkey"><input id="ghtok" type="password" placeholder="粘一次 GitHub token（只存本机）"><button id="saveTok">存</button></div>
 </div>
 
 <div class="page" id="listPage">
@@ -171,6 +195,40 @@ function openChat(i){
   setTimeout(function(){msgs.scrollTop=msgs.scrollHeight;},50);
 }
 document.getElementById('back').onclick=function(){chatPage.classList.remove('on');listPage.style.display='flex';};
+
+const CFG_RAW='https://raw.githubusercontent.com/BlackJNG/star-board/main/config.json';
+const CFG_API='https://api.github.com/repos/BlackJNG/star-board/contents/config.json';
+const swMap={sw_reply:'auto_reply',sw_pick:'auto_pick',sw_match:'auto_match'};
+let cfgSha=null, cfgNow={};
+function tokGet(){return localStorage.getItem('ghtok')||'';}
+async function loadCfg(){
+  try{
+    const r=await fetch(CFG_RAW+'?t='+Date.now()); const j=await r.json();
+    cfgNow=j;
+    for(const [id,k] of Object.entries(swMap)){ const el=document.getElementById(id); if(el) el.checked=!!j[k]; }
+  }catch(e){}
+}
+async function saveCfg(){
+  const t=tokGet();
+  if(!t){ document.querySelector('.swkey').classList.add('on'); toast('先粘一次 token'); return; }
+  const body={auto_reply:document.getElementById('sw_reply').checked,
+              auto_pick:document.getElementById('sw_pick').checked,
+              auto_match:document.getElementById('sw_match').checked,
+              female_only:true, picks_per_round:cfgNow.picks_per_round||20,
+              greet_new:true, match_gender:'female', match_age_min:18, match_age_max:45};
+  try{
+    let sha=cfgSha;
+    if(!sha){ const r=await fetch(CFG_API,{headers:{Authorization:'token '+t}}); if(r.ok){ sha=(await r.json()).sha; } }
+    const r2=await fetch(CFG_API,{method:'PUT',headers:{Authorization:'token '+t,'Content-Type':'application/json'},
+      body:JSON.stringify({message:'toggle '+new Date().toISOString(),content:btoa(unescape(encodeURIComponent(JSON.stringify(body,null,2)))),sha})});
+    if(r2.ok){ cfgSha=(await r2.json()).content.sha; cfgNow=body; toast('已保存，机器人 2 分钟内生效'); }
+    else { toast('保存失败 '+(await r2.json()).message); }
+  }catch(e){ toast('网络错误'); }
+}
+for(const id of Object.keys(swMap)){ const el=document.getElementById(id); if(el) el.addEventListener('change',saveCfg); }
+document.getElementById('saveTok').addEventListener('click',()=>{ const v=document.getElementById('ghtok').value.trim();
+  if(v){ localStorage.setItem('ghtok',v); document.querySelector('.swkey').classList.remove('on'); toast('token 已保存'); saveCfg(); } });
+loadCfg();
 </script>
 </body>
 </html>
