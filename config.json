@@ -1,6 +1,6 @@
 {
   "auto_reply": true,
-  "auto_pick": false,
+  "auto_pick": true,
   "auto_match": false,
   "female_only": true,
   "picks_per_round": 20,
