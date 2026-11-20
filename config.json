@@ -1,0 +1,11 @@
+{
+  "auto_reply": true,
+  "auto_pick": true,
+  "auto_match": false,
+  "female_only": true,
+  "picks_per_round": 20,
+  "greet_new": true,
+  "match_gender": "female",
+  "match_age_min": 18,
+  "match_age_max": 45
+}
